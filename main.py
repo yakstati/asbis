@@ -1,9 +1,9 @@
-# 
-
+from target import target
 from aircraft import aircraft
 import numpy as np
 
 ac = aircraft()
+tar = target(pos=[2000.0, 0.0, 0.0], vel=[-16.6, 0.0, 0.0])
 
 y0 = [
         0.0,      # x_g
@@ -25,8 +25,12 @@ t_span = (0.0, 90.0)
 t_eval = np.linspace(0.0, 90.0, 901)
 
 sol = ac.integrate(y0, t_span)
+sol_tar = tar.integrate(t_span)
 
 if not sol.success:
-    print("ошибка интегрирования", sol.message)
+    print("ошибка интегрирования движения ла", sol.message)
 
+if not sol_tar.success:
+    print("ошибка интегрирования движения цели", sol.message)
+ac.observe(sol_tar, t_span)
 ac.plot_motion()
