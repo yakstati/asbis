@@ -80,23 +80,29 @@ class aircraft():
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
-        D = 10 * np.eye(6)
+        D = np.diag([25., 25., 25., 0.1, 0.1, 0.1])**2
 
         for t in range(len(t_eval)):
             X = np.array([self.sol[0][t], self.sol[1][t], self.sol[2][t], 
             self.sol[3][t], self.sol[4][t], self.sol[5][t], 
             self.sol[6][t], self.sol[7][t], self.sol[8][t], 
             self.sol[9][t], self.sol[10][t], self.sol[11][t]]).T
+
+            Q = np.diag([30., 30., 30.,          
+                 10., 10., 10.,          
+                 0.01, 0.01, 0.01,    
+                 0.1, 0.1, 0.1])
+
             Y_obs = H @ X + np.array([20, 20, 20, 0.05, 0.05, 0.05]).T * np.random.randn(6) # генерация измерений
 
-            P_o = np.linalg.inv(np.linalg.pinv(P_p) + H.T @ np.linalg.inv(D) @ H) # коррекция i шага
+            P_o = np.linalg.inv(np.linalg.inv(P_p) + H.T @ np.linalg.inv(D) @ H) # коррекция i шага
             X_o = X_p + P_o @ H.T @ np.linalg.inv(D) @ (Y_obs - H @ X_p)
 
             A = self.jacobian(X_o)
             F = np.eye(12) + A * dt # DT ПО ГЕРЦОВКЕ НЕ ЗАБЫТЬ
 
             X_p = F @ X_o # + управление потом     прогноз на i+1
-            P_p = F @ P_o @ F.T
+            P_p = F @ P_o @ F.T + Q
 
             self.P_o_array.append(P_o)
             self.X_o_array.append(X_o)
@@ -173,10 +179,10 @@ class aircraft():
         A1_1 =  0
         A1_2 =  0
         A1_3 =  0
-        A1_4 =  np.cos(psi) * np.cos(theta)
+        A1_4 =  np.cos(psi)*np.cos(theta)
         A1_5 =  np.sin(gamma)*np.sin(psi) - np.sin(theta)*np.cos(gamma)*np.cos(psi)
         A1_6 =  np.sin(gamma)*np.sin(theta)*np.cos(psi) + np.sin(psi)*np.cos(gamma)
-        A1_7 =  -vx*np.sin(psi)*np.cos(theta) + vy*(np.sin(gamma)*np.cos(psi) + np.sin(psi)*np.sin(theta)*np.cos(gamma)) + vz*(-np.sin(gamma)*np.sin(psi)*np.sin(theta)+ np.cos(gamma)*np.cos(psi))
+        A1_7 =  -vx*np.sin(psi)*np.cos(theta) + vy*(np.sin(gamma)*np.cos(psi) + np.sin(psi)*np.sin(theta)*np.cos(gamma)) + vz*(-np.sin(gamma)*np.sin(psi)*np.sin(theta) + np.cos(gamma)*np.cos(psi))
         A1_8 =  -vx*np.sin(theta)*np.cos(psi) - vy*np.cos(gamma)*np.cos(psi)*np.cos(theta) + vz*np.sin(gamma)*np.cos(psi)*np.cos(theta)
         A1_9 =  vy*(np.sin(gamma)*np.sin(theta)*np.cos(psi) + np.sin(psi)*np.cos(gamma)) + vz*(-np.sin(gamma)*np.sin(psi) + np.sin(theta)*np.cos(gamma)*np.cos(psi))
         A1_10 =  0
@@ -209,11 +215,11 @@ class aircraft():
         A4_1 =  0
         A4_2 =  0
         A4_3 =  0
-        A4_4 =  0
-        A4_5 =  wz
-        A4_6 =  -wy
+        A4_4 =  -1.66666666666667e-6*self.g*vx
+        A4_5 =  -1.66666666666667e-6*self.g*vy + wz
+        A4_6 =  -1.66666666666667e-6*self.g*vz - wy
         A4_7 =  0
-        A4_8 =  0
+        A4_8 =  self.g*np.cos(theta)
         A4_9 =  0
         A4_10 =  0
         A4_11 =  -vz
@@ -221,24 +227,24 @@ class aircraft():
         A5_1 =  0
         A5_2 =  0
         A5_3 =  0
-        A5_4 =  -wz
-        A5_5 =  0
+        A5_4 =  -5.0*self.g*vy/(vx**2 + vy**2) - wz
+        A5_5 =  5.0*self.g*vx/(vx**2 + vy**2)
         A5_6 =  wx
         A5_7 =  0
-        A5_8 =  0
-        A5_9 =  0
+        A5_8 =  self.g*np.sin(theta)*np.cos(gamma)
+        A5_9 =  self.g*np.sin(gamma)*np.cos(theta)
         A5_10 =  vz
         A5_11 =  0
         A5_12 =  -vx
         A6_1 =  0
         A6_2 =  0
         A6_3 =  0
-        A6_4 =  wy
-        A6_5 =  -wx
-        A6_6 =  0
+        A6_4 =  2.0*self.g*vx*vz/(np.sqrt(-vz**2/(vx**2 + vy**2 + vz**2) + 1)*(vx**2 + vy**2 + vz**2)**(3/2)) + wy
+        A6_5 =  2.0*self.g*vy*vz/(np.sqrt(-vz**2/(vx**2 + vy**2 + vz**2) + 1)*(vx**2 + vy**2 + vz**2)**(3/2)) - wx
+        A6_6 =  -2.0*self.g*(-vz**2/(vx**2 + vy**2 + vz**2)**(3/2) + 1/np.sqrt(vx**2 + vy**2 + vz**2))/np.sqrt(-vz**2/(vx**2 + vy**2 + vz**2) + 1)
         A6_7 =  0
-        A6_8 =  0
-        A6_9 =  0
+        A6_8 =  -self.g*np.sin(gamma)*np.sin(theta)
+        A6_9 =  self.g*np.cos(gamma)*np.cos(theta)
         A6_10 =  -vy
         A6_11 =  vx
         A6_12 =  0
@@ -281,39 +287,39 @@ class aircraft():
         A10_1 =  0
         A10_2 =  0
         A10_3 =  0
-        A10_4 =  0
-        A10_5 =  0
-        A10_6 =  0
+        A10_4 =  20000.0*vx*vz/(self.Ix*np.sqrt(-vz**2/(vx**2 + vy**2 + vz**2) + 1)*(vx**2 + vy**2 + vz**2)**(3/2))
+        A10_5 =  20000.0*vy*vz/(self.Ix*np.sqrt(-vz**2/(vx**2 + vy**2 + vz**2) + 1)*(vx**2 + vy**2 + vz**2)**(3/2))
+        A10_6 =  -20000.0*(-vz**2/(vx**2 + vy**2 + vz**2)**(3/2) + 1/np.sqrt(vx**2 + vy**2 + vz**2))/(self.Ix*np.sqrt(-vz**2/(vx**2 + vy**2 + vz**2) + 1))
         A10_7 =  0
         A10_8 =  0
         A10_9 =  0
-        A10_10 =  0
+        A10_10 =  -15000.0/self.Ix
         A10_11 =  wz*(self.Iy - self.Iz)/self.Ix
         A10_12 =  wy*(self.Iy - self.Iz)/self.Ix
         A11_1 =  0
         A11_2 =  0
         A11_3 =  0
-        A11_4 =  0
-        A11_5 =  0
+        A11_4 =  60000.0*vy/(self.Iy*(vx**2 + vy**2))
+        A11_5 =  -60000.0*vx/(self.Iy*(vx**2 + vy**2))
         A11_6 =  0
         A11_7 =  0
         A11_8 =  0
         A11_9 =  0
         A11_10 =  wz*(-self.Ix + self.Iz)/self.Iy
-        A11_11 =  0
+        A11_11 =  -40000.0/self.Iy
         A11_12 =  wx*(-self.Ix + self.Iz)/self.Iy
         A12_1 =  0
         A12_2 =  0
         A12_3 =  0
-        A12_4 =  0
-        A12_5 =  0
-        A12_6 =  0
+        A12_4 =  -15000.0*vx*vz/(self.Iz*np.sqrt(-vz**2/(vx**2 + vy**2 + vz**2) + 1)*(vx**2 + vy**2 + vz**2)**(3/2))
+        A12_5 =  -15000.0*vy*vz/(self.Iz*np.sqrt(-vz**2/(vx**2 + vy**2 + vz**2) + 1)*(vx**2 + vy**2 + vz**2)**(3/2))
+        A12_6 =  15000.0*(-vz**2/(vx**2 + vy**2 + vz**2)**(3/2) + 1/np.sqrt(vx**2 + vy**2 + vz**2))/(self.Iz*np.sqrt(-vz**2/(vx**2 + vy**2 + vz**2) + 1))
         A12_7 =  0
         A12_8 =  0
         A12_9 =  0
         A12_10 =  wy*(self.Ix - self.Iy)/self.Iz
         A12_11 =  wx*(self.Ix - self.Iy)/self.Iz
-        A12_12 =  0       
+        A12_12 =  -20000.0/self.Iz       
 
         A_1 = [A1_1, A1_2, A1_3, A1_4, A1_5, A1_6, A1_7, A1_8, A1_9, A1_10, A1_11, A1_12]
         A_2 = [A2_1, A2_2, A2_3, A2_4, A2_5, A2_6, A2_7, A2_8, A2_9, A2_10, A2_11, A2_12]

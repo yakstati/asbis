@@ -1,4 +1,4 @@
-from sympy import symbols, diff, sin, cos, tan
+from sympy import symbols, diff, sin, cos, tan, sqrt, atan2, asin
 x = symbols('x')
 y = symbols('y')
 z = symbols('z')
@@ -11,17 +11,20 @@ gamma = symbols('gamma')
 wx = symbols('wx')
 wy = symbols('wy')
 wz = symbols('wz')
-
+'''
 Fx = symbols('Fx')
 Fy = symbols('Fy')
 Fz = symbols('Fz')
 Mx = symbols('Mx')
 My=symbols('My')
 Mz=symbols('Mz')
+'''
 Ix=symbols('Ix')
 Iy=symbols('Iy')
 Iz=symbols('Iz')
 m = symbols('m')
+g = symbols('g')
+T = symbols('T')
 
 
 func1 = vx * cos(theta) * cos(psi) + vy * (sin(gamma) * sin(psi) - cos(gamma) * sin(theta) * cos(psi)) + vz * (cos(gamma) * sin(psi) + sin(gamma) * sin(theta) * cos(psi))
@@ -69,7 +72,7 @@ print('A3_10 = ', func3.diff(wx))
 print('A3_11 = ', func3.diff(wy))
 print('A3_12 = ', func3.diff(wz))
 
-func4 = Fx / m + vy * wz - vz * wy
+func4 = (T - (0.012 * m * g * ((sqrt(vx**2 + vy**2 + vz**2)) / 120.0)**2) + m * g * sin(theta)) / m + vy * wz - vz * wy
 
 print('A4_1 = ', func4.diff(x))
 print('A4_2 = ', func4.diff(y))
@@ -84,7 +87,7 @@ print('A4_10 = ', func4.diff(wx))
 print('A4_11 = ', func4.diff(wy))
 print('A4_12 = ', func4.diff(wz))
 
-func5 = Fy / m + vz * wx - vx * wz
+func5 = (-m * g * cos(theta) * cos(gamma) + m * g * (0.95 + 5.0 * (atan2(vy, vx)))) / m + vz * wx - vx * wz
 
 print('A5_1 = ', func5.diff(x))
 print('A5_2 = ', func5.diff(y))
@@ -99,7 +102,7 @@ print('A5_10 = ', func5.diff(wx))
 print('A5_11 = ', func5.diff(wy))
 print('A5_12 = ', func5.diff(wz))
 
-func6 = dvzdt = Fz / m + vx * wy - vy * wx
+func6 = dvzdt = (m * g * cos(theta) * sin(gamma) - 2.0 * m * g * (asin(vz / (sqrt(vx**2 + vy**2 + vz**2))))) / m + vx * wy - vy * wx
 
 print('A6_1 = ', func6.diff(x))
 print('A6_2 = ', func6.diff(y))
@@ -159,7 +162,7 @@ print('A9_10 = ', func9.diff(wx))
 print('A9_11 = ', func9.diff(wy))
 print('A9_12 = ', func9.diff(wz))
 
-func10 = 1 / Ix * (Mx + (Iy - Iz) * wy * wz)
+func10 = 1 / Ix * ((-15000.0 * wx - 20000.0 * (asin(vz / (sqrt(vx**2 + vy**2 + vz**2))))) + (Iy - Iz) * wy * wz)
 
 print('A10_1 = ', func10.diff(x))
 print('A10_2 = ', func10.diff(y))
@@ -174,7 +177,7 @@ print('A10_10 = ', func10.diff(wx))
 print('A10_11 = ', func10.diff(wy))
 print('A10_12 = ', func10.diff(wz))
 
-func11 = 1 / Iy * (My + (Iz - Ix) * wz * wx)
+func11 = 1 / Iy * ((-40000.0 * wy - 60000.0 * (atan2(vy, vx))) + (Iz - Ix) * wz * wx)
 
 print('A11_1 = ', func11.diff(x))
 print('A11_2 = ', func11.diff(y))
@@ -189,7 +192,7 @@ print('A11_10 = ', func11.diff(wx))
 print('A11_11 = ', func11.diff(wy))
 print('A11_12 = ', func11.diff(wz))
 
-func12 = 1 / Iz * (Mz + (Ix - Iy) * wx * wy)
+func12 = 1 / Iz * ((-20000.0 * wz + 15000.0 * (asin(vz / (sqrt(vx**2 + vy**2 + vz**2))))) + (Ix - Iy) * wx * wy)
 
 print('A12_1 = ', func12.diff(x))
 print('A12_2 = ', func12.diff(y))

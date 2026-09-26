@@ -1,9 +1,10 @@
-# фк по x отрабатывает нормально в рамках положению по x, для улучшения дополнить якобиан с учетом зависимости F и M
-# поразмыслить над СУ
+# закинуть фк в интегрирование, прикрутить измерения до цели (на основе x_o, p_o), квантование (так же на основе фк), пораскинуть извилиной над прицеливанием
+
 from target import target
 from aircraft import aircraft
 import numpy as np
 import matplotlib.pyplot as plt
+from plot_fk import plot_fk
 
 ac = aircraft()
 tar = target(pos=[2000.0, 0.0, 0.0], vel=[-16.6, 0.0, 0.0])
@@ -39,26 +40,6 @@ if not sol_tar.success:
 P_o, X_o = ac.fk(t_eval)
 ac.observe(sol_tar, t_eval)
 
-
-
-#print(X_o[:, 0])
-
-t = ac.t
-x = ac.sol[0]
-#print('t=', t)
-#print('x=', x)
-#print('x_o=', X_o[0])
-
-#print(x-X_o[:,0])
-for i in range(len(t_eval)):
-    print (x[i], X_o[i, 0]) 
-
-fig = plt.figure()
-ax = fig.add_subplot()
-#ax1.plot(x, t, 'b-')
-ax.plot(t, x - X_o[:, 0], 'g-', label='x - x_o')
-ax.set_xlabel('t [с]')
-ax.set_ylabel('X [м]')
-
+plot_fk(ac, X_o, P_o, t_eval)
 
 plt.show()
