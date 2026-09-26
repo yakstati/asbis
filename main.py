@@ -1,3 +1,5 @@
+# фк крутится, проверить и отладить
+# поразмыслить над СУ
 from target import target
 from aircraft import aircraft
 import numpy as np
@@ -32,5 +34,6 @@ if not sol.success:
 
 if not sol_tar.success:
     print("ошибка интегрирования движения цели", sol.message)
+ac.fk(t_span)
 ac.observe(sol_tar, t_span)
 ac.plot_motion()

@@ -2,6 +2,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 
+
 class aircraft():
     def __init__(self, mass=10000.0, Ix=15000.0, Iy=50000.0, Iz=60000.0, g=9.8):
 
@@ -12,7 +13,10 @@ class aircraft():
         self.g = g 
 
         self.t = None
-        self.sol = None     
+        self.sol = None   
+
+        self.P_o_array = []
+        self.X_o_array = []  
 
     def model(self, t, state):
         x, y, z, vx, vy, vz, psi, theta, gamma, wx, wy, wz = state 
@@ -63,6 +67,45 @@ class aircraft():
         self.sol = sol.y      
         self.raw_sol = sol
         return sol
+
+    def fk(self, t_span): # НУЖНО БУДЕТ ПЕРЕПИСАТЬ НЕ НА ВЕСЬ t_span, А КОНКРЕТНЫЙ МОМЕНТ, И ПИХНУТЬ В integrate для послед логики управления по текущей оценке
+        dt = 0.1
+        X_p = np.array([0, 2000, 0, 120, 0, 0, 0, 0, 0, 0, 0, 0]).T
+        P_p = 1e+5 * np.eye(12)  # начальный прогноз
+        X = np.array([self.sol[0][0], self.sol[1][0], self.sol[2][0], 
+                      self.sol[3][0], self.sol[4][0], self.sol[6][0], 
+                      self.sol[6][0], self.sol[7][0], self.sol[8][0], 
+                      self.sol[9][0], self.sol[10][0], self.sol[11][0], ]).T
+        #print(X)
+        H=np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
+        D = 10 * np.eye(6)
+
+        for t in range(len(t_span)):
+            Y_obs = H @ X + np.ones(6).T * 10 * np.random.randn(6) # генерация измерений
+
+            P_o = np.linalg.inv(np.linalg.inv(P_p) + H.T @ np.linalg.inv(D) @ H) # коррекция i шага
+            X_o = X_p + P_o @ H.T @ np.linalg.inv(D) @ (Y_obs - H @ X)
+
+            A = self.jacobian(t)
+            F = np.eye(12) + A * dt # DT ПО ГЕРЦОВКЕ НЕ ЗАБЫТЬ
+
+            X_p = F @ X_o # + управление потом     прогноз на i+1
+            P_p = F @ P_o * F.T
+
+            self.P_o_array.append(P_o)
+            self.X_o_array.append(X_o)
+
+
+        return self.P_o_array, self.X_o_array
+
+
+
+
 
     def plot_motion(self):
 
@@ -123,8 +166,8 @@ class aircraft():
         pass
 
         
-    def jacobian(self):
-        x, y, z, vx, vy, vz, psi, theta, gamma, wx, wy, wz = self.sol[0][0], self.sol[1][0], self.sol[2][0], self.sol[3][0], self.sol[4][0], self.sol[5][0], self.sol[6][0], self.sol[7][0], self.sol[8][0], self.sol[9][0], self.sol[10][0], self.sol[11][0]
+    def jacobian(self, t):
+        x, y, z, vx, vy, vz, psi, theta, gamma, wx, wy, wz = self.sol[0][t], self.sol[1][t], self.sol[2][t], self.sol[3][t], self.sol[4][t], self.sol[5][t], self.sol[6][t], self.sol[7][t], self.sol[8][t], self.sol[9][t], self.sol[10][t], self.sol[11][t]
         A1_1 =  0
         A1_2 =  0
         A1_3 =  0
@@ -285,4 +328,4 @@ class aircraft():
 
         A = [A_1, A_2, A_3, A_4, A_5, A_6, A_7, A_8, A_9, A_10, A_11, A_12]
 
-        return A
+        return np.array(A)
