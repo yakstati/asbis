@@ -50,13 +50,13 @@ class aircraft():
 
         return [dxdt, dydt, dzdt, dvxdt, dvydt, dvzdt, dpsidt, dthetadt, dgammadt, dwxdt, dwydt, dwzdt]
 
-    def integrate(self, y0, t_span):
+    def integrate(self, y0, t_span, t_eval):
 
         sol = solve_ivp(
             fun=self.model,
             t_span=t_span,
             y0=y0,
-            t_eval=None,  
+            t_eval=t_eval,  
             rtol=1e-6,
             atol=1e-8,
             method='RK45',
@@ -68,14 +68,11 @@ class aircraft():
         self.raw_sol = sol
         return sol
 
-    def fk(self, t_span): # НУЖНО БУДЕТ ПЕРЕПИСАТЬ НЕ НА ВЕСЬ t_span, А КОНКРЕТНЫЙ МОМЕНТ, И ПИХНУТЬ В integrate для послед логики управления по текущей оценке
+    def fk(self, t_eval): # НУЖНО БУДЕТ ПЕРЕПИСАТЬ НЕ НА ВЕСЬ t_span, А КОНКРЕТНЫЙ МОМЕНТ, И ПИХНУТЬ В integrate для послед логики управления по текущей оценке
         dt = 0.1
         X_p = np.array([0, 2000, 0, 120, 0, 0, 0, 0, 0, 0, 0, 0]).T
         P_p = 1e+5 * np.eye(12)  # начальный прогноз
-        X = np.array([self.sol[0][0], self.sol[1][0], self.sol[2][0], 
-                      self.sol[3][0], self.sol[4][0], self.sol[6][0], 
-                      self.sol[6][0], self.sol[7][0], self.sol[8][0], 
-                      self.sol[9][0], self.sol[10][0], self.sol[11][0], ]).T
+
         #print(X)
         H=np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -85,23 +82,28 @@ class aircraft():
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
         D = 10 * np.eye(6)
 
-        for t in range(len(t_span)):
-            Y_obs = H @ X + np.ones(6).T * 10 * np.random.randn(6) # генерация измерений
+        for t in range(len(t_eval)):
+            X = np.array([self.sol[0][t], self.sol[1][t], self.sol[2][t], 
+            self.sol[3][t], self.sol[4][t], self.sol[5][t], 
+            self.sol[6][t], self.sol[7][t], self.sol[8][t], 
+            self.sol[9][t], self.sol[10][t], self.sol[11][t]]).T
+            Y_obs = H @ X + np.array([20, 20, 20, 0.05, 0.05, 0.05]).T * np.random.randn(6) # генерация измерений
 
-            P_o = np.linalg.inv(np.linalg.inv(P_p) + H.T @ np.linalg.inv(D) @ H) # коррекция i шага
-            X_o = X_p + P_o @ H.T @ np.linalg.inv(D) @ (Y_obs - H @ X)
+            P_o = np.linalg.inv(np.linalg.pinv(P_p) + H.T @ np.linalg.inv(D) @ H) # коррекция i шага
+            X_o = X_p + P_o @ H.T @ np.linalg.inv(D) @ (Y_obs - H @ X_p)
 
-            A = self.jacobian(t)
+            A = self.jacobian(X_o)
             F = np.eye(12) + A * dt # DT ПО ГЕРЦОВКЕ НЕ ЗАБЫТЬ
 
             X_p = F @ X_o # + управление потом     прогноз на i+1
-            P_p = F @ P_o * F.T
+            P_p = F @ P_o @ F.T
 
             self.P_o_array.append(P_o)
             self.X_o_array.append(X_o)
 
 
-        return self.P_o_array, self.X_o_array
+
+        return np.array(self.P_o_array), np.array(self.X_o_array)
 
 
 
@@ -166,8 +168,8 @@ class aircraft():
         pass
 
         
-    def jacobian(self, t):
-        x, y, z, vx, vy, vz, psi, theta, gamma, wx, wy, wz = self.sol[0][t], self.sol[1][t], self.sol[2][t], self.sol[3][t], self.sol[4][t], self.sol[5][t], self.sol[6][t], self.sol[7][t], self.sol[8][t], self.sol[9][t], self.sol[10][t], self.sol[11][t]
+    def jacobian(self, X_o):
+        x, y, z, vx, vy, vz, psi, theta, gamma, wx, wy, wz = X_o[0], X_o[1], X_o[2], X_o[3], X_o[4], X_o[5], X_o[6], X_o[7], X_o[8], X_o[9], X_o[10], X_o[11] 
         A1_1 =  0
         A1_2 =  0
         A1_3 =  0
@@ -322,9 +324,9 @@ class aircraft():
         A_7 = [A7_1, A7_2, A7_3, A7_4, A7_5, A7_6, A7_7, A7_8, A7_9, A7_10, A7_11, A7_12]
         A_8 = [A8_1, A8_2, A8_3, A8_4, A8_5, A8_6, A8_7, A8_8, A8_9, A8_10, A8_11, A8_12]
         A_9 = [A9_1, A9_2, A9_3, A9_4, A9_5, A9_6, A9_7, A9_8, A9_9, A9_10, A9_11, A9_12]
-        A_10 = [A10_1, A10_2, A10_3, A10_4, A10_5, A10_6, A10_7, A10_8, A1_9, A10_10, A10_11, A10_12]
-        A_11 = [A11_1, A11_2, A11_3, A11_4, A11_5, A11_6, A11_7, A11_8, A1_9, A11_10, A11_11, A11_12]
-        A_12 = [A12_1, A12_2, A12_3, A12_4, A12_5, A12_6, A12_7, A12_8, A1_9, A12_10, A12_11, A12_12]
+        A_10 = [A10_1, A10_2, A10_3, A10_4, A10_5, A10_6, A10_7, A10_8, A10_9, A10_10, A10_11, A10_12]
+        A_11 = [A11_1, A11_2, A11_3, A11_4, A11_5, A11_6, A11_7, A11_8, A11_9, A11_10, A11_11, A11_12]
+        A_12 = [A12_1, A12_2, A12_3, A12_4, A12_5, A12_6, A12_7, A12_8, A12_9, A12_10, A12_11, A12_12]
 
         A = [A_1, A_2, A_3, A_4, A_5, A_6, A_7, A_8, A_9, A_10, A_11, A_12]
 

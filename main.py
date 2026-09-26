@@ -1,8 +1,9 @@
-# фк крутится, проверить и отладить
+# фк по x отрабатывает нормально в рамках положению по x, для улучшения дополнить якобиан с учетом зависимости F и M
 # поразмыслить над СУ
 from target import target
 from aircraft import aircraft
 import numpy as np
+import matplotlib.pyplot as plt
 
 ac = aircraft()
 tar = target(pos=[2000.0, 0.0, 0.0], vel=[-16.6, 0.0, 0.0])
@@ -26,7 +27,7 @@ y0 = [
 t_span = (0.0, 90.0)
 t_eval = np.linspace(0.0, 90.0, 901)
 
-sol = ac.integrate(y0, t_span)
+sol = ac.integrate(y0, t_span, t_eval)
 sol_tar = tar.integrate(t_span)
 
 if not sol.success:
@@ -34,6 +35,30 @@ if not sol.success:
 
 if not sol_tar.success:
     print("ошибка интегрирования движения цели", sol.message)
-ac.fk(t_span)
-ac.observe(sol_tar, t_span)
-ac.plot_motion()
+
+P_o, X_o = ac.fk(t_eval)
+ac.observe(sol_tar, t_eval)
+
+
+
+#print(X_o[:, 0])
+
+t = ac.t
+x = ac.sol[0]
+#print('t=', t)
+#print('x=', x)
+#print('x_o=', X_o[0])
+
+#print(x-X_o[:,0])
+for i in range(len(t_eval)):
+    print (x[i], X_o[i, 0]) 
+
+fig = plt.figure()
+ax = fig.add_subplot()
+#ax1.plot(x, t, 'b-')
+ax.plot(t, x - X_o[:, 0], 'g-', label='x - x_o')
+ax.set_xlabel('t [с]')
+ax.set_ylabel('X [м]')
+
+
+plt.show()
